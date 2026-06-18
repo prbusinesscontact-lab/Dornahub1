@@ -1,51 +1,52 @@
 -- ==========================================================
--- 1. KEY SYSTEM FETCH
+-- 1. DEBUGGABLE KEY SYSTEM FETCH
 -- ==========================================================
 local HttpService = game:GetService("HttpService")
 local keysUrl = "https://raw.githubusercontent.com/prbusinesscontact-lab/Dornahub1/refs/heads/main/keys.json"
 local validKeys = {}
-local fetched = false
 
-task.spawn(function()
-    local success, response = pcall(function() return game:HttpGet(keysUrl) end)
-    if success and response then
-        local decodeSuccess, decodedTable = pcall(function() return HttpService:JSONDecode(response) end)
-        if decodeSuccess then validKeys = decodedTable; fetched = true end
+local success, response = pcall(function() return game:HttpGet(keysUrl) end)
+
+if success then
+    print("DornaHub Debug: GitHub Response received.")
+    local decodeSuccess, decodedTable = pcall(function() return HttpService:JSONDecode(response) end)
+    if decodeSuccess then
+        validKeys = decodedTable
+        print("DornaHub Debug: Keys loaded successfully.")
+    else
+        warn("DornaHub Debug: Failed to decode JSON. Check keys.json format.")
     end
-end)
-repeat task.wait(0.5) until fetched
-
--- ==========================================================
--- 2. AUTO-REDIRECT TO DISCORD
--- ==========================================================
--- This automatically opens your Discord link in the user's browser
-local requestFunc = syn and syn.request or request or http_request
-if requestFunc then
-    requestFunc({
-        Url = "https://discord.gg/YugE36557n",
-        Method = "GET"
-    })
+else
+    warn("DornaHub Debug: Failed to connect to GitHub. Check URL and Repository Privacy.")
 end
 
 -- ==========================================================
--- 3. CORE SCRIPT (Auto Wheelie + Discord Webhook Only)
+-- 2. AUTO-REDIRECT
+-- ==========================================================
+local requestFunc = syn and syn.request or request or http_request
+if requestFunc then
+    requestFunc({Url = "https://discord.gg/YugE36557n", Method = "GET"})
+end
+
+-- ==========================================================
+-- 3. CORE SCRIPT
 -- ==========================================================
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 local Config = {Enabled = false, Webhook = "YOUR_WEBHOOK_URL_HERE", HoldDuration = 0.06, IntervalDuration = 0.05}
 local VirtualInputManager = game:GetService("VirtualInputManager")
 
--- Window
 local Window = Rayfield:CreateWindow({
    Name = "Street Volt Miami 2 | Auto-Wheelie",
    KeySystem = true, 
    KeySettings = {
+      Title = "SVM2 Secure Key",
+      Subtitle = "Generate key via Discord",
       Key = validKeys,
       SaveKey = true,
       FileName = "SVM2KeyCache"
    }
 })
 
--- Wheelie Logic
 task.spawn(function()
     local wasEnabled = false
     while true do
@@ -61,9 +62,9 @@ end)
 
 -- TABS
 local AutoWheelieTab = Window:CreateTab("Auto Wheelie", nil)
-AutoWheelieTab:CreateToggle({Name = "Enable Auto Wheelie", Callback = function(V) Config.Enabled = V end})
-AutoWheelieTab:CreateSlider({Name = "Hold Time", Min = 0.01, Max = 1.5, CurrentValue = 0.06, Callback = function(V) Config.HoldDuration = V end})
-AutoWheelieTab:CreateSlider({Name = "Interval", Min = 0.01, Max = 1.5, CurrentValue = 0.05, Callback = function(V) Config.IntervalDuration = V end})
+AutoWheelieTab:CreateToggle({Name = "Enable Auto Wheelie", CurrentValue = false, Callback = function(V) Config.Enabled = V end})
+AutoWheelieTab:CreateSlider({Name = "Hold Time", Min = 0.01, Max = 1.5, CurrentValue = 0.06, Increment = 0.01, Callback = function(V) Config.HoldDuration = V end})
+AutoWheelieTab:CreateSlider({Name = "Interval", Min = 0.01, Max = 1.5, CurrentValue = 0.05, Increment = 0.01, Callback = function(V) Config.IntervalDuration = V end})
 
 local DiscordTab = Window:CreateTab("Discord", nil)
 DiscordTab:CreateInput({Name = "Discord Webhook URL", Callback = function(T) Config.Webhook = T end})
