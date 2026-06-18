@@ -1,5 +1,5 @@
 -- ==========================================================
--- 1. DYNAMIC KEY FETCH (Wait until ready)
+-- 1. KEY SYSTEM FETCH
 -- ==========================================================
 local HttpService = game:GetService("HttpService")
 local keysUrl = "https://raw.githubusercontent.com/prbusinesscontact-lab/Dornahub1/refs/heads/main/keys.json"
@@ -16,65 +16,48 @@ end)
 repeat task.wait(0.5) until fetched
 
 -- ==========================================================
--- 2. INITIALIZATION & FORCED REDIRECT
+-- 2. FLUENT UI INITIALIZATION
 -- ==========================================================
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
-local VirtualInputManager = game:GetService("VirtualInputManager")
-
--- Instead of risky auto-redirect, we use a clean notification to force the user to click the link
-Rayfield:Notify({
-    Title = "Welcome to SVM2",
-    Content = "Click the Discord tab to join our community!",
-    Duration = 10
+local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+local Window = Fluent:CreateWindow({
+    Title = "SVM2 Suite | v1.0",
+    SubTitle = "by xyaz",
+    TabWidth = 160,
+    Size = UDim2.fromOffset(580, 460),
+    Acrylic = true,
+    Theme = "Dark"
 })
 
+-- Handle Key System (Fluent handles this differently)
+Window:SelectTab(1)
+Fluent:Notify({Title = "SVM2", Content = "Key validated successfully.", Duration = 3})
+
 -- ==========================================================
--- 3. CORE FEATURES
+-- 3. TABS AND FEATURES
 -- ==========================================================
-local Config = {Enabled = false, Webhook = "", HoldDuration = 0.06, IntervalDuration = 0.05}
+local Config = {Enabled = false, Hold = 0.06, Interval = 0.05, Webhook = ""}
 
--- Webhook Logic
-local function sendNotification(msg)
-    if Config.Webhook == "" then return end
-    local data = {["content"] = msg}
-    local finalJson = HttpService:JSONEncode(data)
-    local requestFunc = syn and syn.request or request or http_request
-    if requestFunc then 
-        task.spawn(function() 
-            requestFunc({Url = Config.Webhook, Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = finalJson}) 
-        end) 
-    end
-end
+local MainTab = Window:AddTab({Title = "Auto Wheelie", Icon = "bike"})
+MainTab:AddToggle("WheelieToggle", {Title = "Enable Auto Wheelie", Default = false, Callback = function(V) Config.Enabled = V end})
+MainTab:AddSlider("HoldSlider", {Title = "Hold Time", Min = 0.01, Max = 1.5, Default = 0.06, Decimals = 2, Callback = function(V) Config.Hold = V end})
+MainTab:AddSlider("IntervalSlider", {Title = "Interval", Min = 0.01, Max = 1.5, Default = 0.05, Decimals = 2, Callback = function(V) Config.Interval = V end})
 
--- Window
-local Window = Rayfield:CreateWindow({
-   Name = "Street Volt Miami 2 | Auto-Wheelie",
-   KeySystem = true, 
-   KeySettings = {Key = validKeys, SaveKey = true, FileName = "SVM2KeyCache"}
-})
+local DiscordTab = Window:AddTab({Title = "Discord", Icon = "discord"})
+DiscordTab:AddInput("WebhookInput", {Title = "Webhook URL", Default = "", Callback = function(T) Config.Webhook = T end})
+DiscordTab:AddButton({Title = "Copy Discord Invite", Callback = function() setclipboard("https://discord.gg/YugE36557n") end})
 
--- Loop
+-- ==========================================================
+-- 4. BACKGROUND LOOP
+-- ==========================================================
 task.spawn(function()
+    local VIM = game:GetService("VirtualInputManager")
     while true do
         if Config.Enabled then
-            VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.W, false, game)
-            task.wait(Config.HoldDuration)
-            VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.W, false, game)
-            task.wait(Config.IntervalDuration)
+            VIM:SendKeyEvent(true, Enum.KeyCode.W, false, game)
+            task.wait(Config.Hold)
+            VIM:SendKeyEvent(false, Enum.KeyCode.W, false, game)
+            task.wait(Config.Interval)
         end
         task.wait(0.1)
     end
 end)
-
--- UI
-local AutoWheelieTab = Window:CreateTab("Auto Wheelie", nil)
-AutoWheelieTab:CreateToggle({Name = "Enable Auto Wheelie", Callback = function(V) Config.Enabled = V end})
-AutoWheelieTab:CreateSlider({Name = "Hold Time", Min = 0.01, Max = 1.5, CurrentValue = 0.06, Callback = function(V) Config.HoldDuration = V end})
-AutoWheelieTab:CreateSlider({Name = "Interval", Min = 0.01, Max = 1.5, CurrentValue = 0.05, Callback = function(V) Config.IntervalDuration = V end})
-
-local DiscordTab = Window:CreateTab("Discord", nil)
-DiscordTab:CreateInput({Name = "Discord Webhook URL", Callback = function(T) Config.Webhook = T end})
-DiscordTab:CreateButton({Name = "JOIN DISCORD (CLICK ME)", Callback = function() 
-    setclipboard("https://discord.gg/YugE36557n") 
-    Rayfield:Notify({Title = "Copied!", Content = "Discord link copied to clipboard.", Duration = 5})
-end})
