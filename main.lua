@@ -4,21 +4,26 @@
 local HttpService = game:GetService("HttpService")
 local keysUrl = "https://raw.githubusercontent.com/prbusinesscontact-lab/Dornahub1/refs/heads/main/keys.json"
 local validKeys = {}
-local fetched = false
 
-task.spawn(function()
-    local success, response = pcall(function() return game:HttpGet(keysUrl) end)
-    if success and response then
-        local decodeSuccess, decodedTable = pcall(function() return HttpService:JSONDecode(response) end)
-        if decodeSuccess then validKeys = decodedTable; fetched = true end
-    end
-end)
-repeat task.wait(0.5) until fetched
+local success, response = pcall(function() return game:HttpGet(keysUrl) end)
+if success then
+    local decoded = HttpService:JSONDecode(response)
+    if decoded then validKeys = decoded end
+end
 
 -- ==========================================================
--- 2. FLUENT UI INITIALIZATION
+-- 2. AUTO-REDIRECT TO DISCORD
+-- ==========================================================
+local requestFunc = syn and syn.request or request or http_request
+if requestFunc then
+    requestFunc({Url = "https://discord.gg/YugE36557n", Method = "GET"})
+end
+
+-- ==========================================================
+-- 3. FLUENT UI INITIALIZATION
 -- ==========================================================
 local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+
 local Window = Fluent:CreateWindow({
     Title = "SVM2 Suite | v1.0",
     SubTitle = "by xyaz",
@@ -28,14 +33,11 @@ local Window = Fluent:CreateWindow({
     Theme = "Dark"
 })
 
--- Handle Key System (Fluent handles this differently)
-Window:SelectTab(1)
-Fluent:Notify({Title = "SVM2", Content = "Key validated successfully.", Duration = 3})
-
 -- ==========================================================
--- 3. TABS AND FEATURES
+-- 4. TABS & FEATURES
 -- ==========================================================
 local Config = {Enabled = false, Hold = 0.06, Interval = 0.05, Webhook = ""}
+local VIM = game:GetService("VirtualInputManager")
 
 local MainTab = Window:AddTab({Title = "Auto Wheelie", Icon = "bike"})
 MainTab:AddToggle("WheelieToggle", {Title = "Enable Auto Wheelie", Default = false, Callback = function(V) Config.Enabled = V end})
@@ -43,14 +45,13 @@ MainTab:AddSlider("HoldSlider", {Title = "Hold Time", Min = 0.01, Max = 1.5, Def
 MainTab:AddSlider("IntervalSlider", {Title = "Interval", Min = 0.01, Max = 1.5, Default = 0.05, Decimals = 2, Callback = function(V) Config.Interval = V end})
 
 local DiscordTab = Window:AddTab({Title = "Discord", Icon = "discord"})
-DiscordTab:AddInput("WebhookInput", {Title = "Webhook URL", Default = "", Callback = function(T) Config.Webhook = T end})
-DiscordTab:AddButton({Title = "Copy Discord Invite", Callback = function() setclipboard("https://discord.gg/YugE36557n") end})
+DiscordTab:AddInput("WebhookInput", {Title = "Discord Webhook URL", Default = "", Callback = function(T) Config.Webhook = T end})
+DiscordTab:AddButton({Title = "Join Official Discord", Callback = function() setclipboard("https://discord.gg/YugE36557n") end})
 
 -- ==========================================================
--- 4. BACKGROUND LOOP
+-- 5. BACKGROUND LOOP
 -- ==========================================================
 task.spawn(function()
-    local VIM = game:GetService("VirtualInputManager")
     while true do
         if Config.Enabled then
             VIM:SendKeyEvent(true, Enum.KeyCode.W, false, game)
