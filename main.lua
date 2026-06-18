@@ -1,9 +1,9 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "Street Volt Miami 2 | Auto-Wheelie",
-   LoadingTitle = "Adjusting Center of Gravity...",
-   LoadingSubtitle = "by Gemini",
+   Name = "Dorna SVM2",
+   LoadingTitle = "discord.gg/YugE36557n",
+   LoadingSubtitle = "By DornaHub",
    ConfigurationSaving = {
       Enabled = true,
       FolderName = "StreetVoltMiami",
@@ -26,7 +26,7 @@ local localPlayer = Players.LocalPlayer
 -- Global Configuration (Lowered hold duration to drop the scooter's angle)
 local Config = {
     Enabled = false,
-    Webhook = "YOUR_WEBHOOK_URL_HERE",
+    Webhook = "Discord-Webhook-Here",
     StatName = "Cash",
     HoldDuration = 0.06,       -- Decreased to 0.06s to keep the front end lower
     IntervalDuration = 0.05    -- Maintained fast recovery rate
@@ -125,7 +125,7 @@ local MainTab = Window:CreateTab("Main Framework", nil)
 MainTab:CreateSection("Low-Angle Automation Matrix")
 
 MainTab:CreateToggle({
-   Name = "Enable Auto-Wheelie Loop",
+   Name = "Auto-Wheelie",
    CurrentValue = false,
    Flag = "WheelieToggle",
    Callback = function(Value)
