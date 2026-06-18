@@ -1,5 +1,5 @@
 -- ==========================================================
--- 1. KEY SYSTEM FETCH (DO NOT REMOVE)
+-- 1. DYNAMIC KEY SYSTEM FETCHER
 -- ==========================================================
 local HttpService = game:GetService("HttpService")
 local keysUrl = "https://raw.githubusercontent.com/prbusinesscontact-lab/Dornahub1/refs/heads/main/keys.json"
@@ -20,8 +20,22 @@ repeat task.wait(0.5) until fetched
 -- ==========================================================
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
-local Config = {Enabled = false, Webhook = "YOUR_WEBHOOK_URL_HERE", StatName = "Cash", HoldDuration = 0.06, IntervalDuration = 0.05, TargetDistance = 750, StatTimeframe = 10, ESPEnabled = false}
-local Defaults = {HoldDuration = 0.06, IntervalDuration = 0.05, TargetDistance = 750}
+local Config = {
+    Enabled = false,
+    Webhook = "YOUR_WEBHOOK_URL_HERE",
+    StatName = "Cash",
+    HoldDuration = 0.06,
+    IntervalDuration = 0.05,
+    TargetDistance = 750,
+    StatTimeframe = 10,
+    ESPEnabled = false
+}
+
+local Defaults = {
+    HoldDuration = 0.06,
+    IntervalDuration = 0.05,
+    TargetDistance = 750
+}
 
 local VirtualInputManager = game:GetService("VirtualInputManager")
 local Players = game:GetService("Players")
@@ -33,7 +47,9 @@ local function getMoneyBalance()
     local leaderstats = localPlayer:FindFirstChild("leaderstats")
     if leaderstats then
         local moneyObj = leaderstats:FindFirstChild(Config.StatName)
-        if moneyObj and (moneyObj:IsA("ValueBase") or moneyObj:IsA("IntValue") or moneyObj:IsA("NumberValue")) then return moneyObj.Value end
+        if moneyObj and (moneyObj:IsA("ValueBase") or moneyObj:IsA("IntValue") or moneyObj:IsA("NumberValue")) then
+            return moneyObj.Value
+        end
     end
     return 0
 end
@@ -50,13 +66,15 @@ local Window = Rayfield:CreateWindow({
    Name = "Street Volt Miami 2 | Suite",
    LoadingTitle = "Initializing Multi-Tab Engine...",
    LoadingSubtitle = "by xyaz",
-   KeySystem = true,
+   ConfigurationSaving = {Enabled = true, FolderName = "StreetVoltMiami", FileName = "SuiteConfig"},
+   KeySystem = true, 
    KeySettings = {
       Title = "SVM2 Secure Key Authentication",
       Subtitle = "Generate key via Discord",
-      Key = validKeys,
+      Note = "Format: SVM2-XXX-XXXXXXXXXX",
+      FileName = "SVM2KeyCache",
       SaveKey = true,
-      FileName = "SVM2KeyCache"
+      Key = validKeys -- CONNECTED TO FETCHED KEYS
    }
 })
 
@@ -95,16 +113,16 @@ end
 
 -- TABS
 local AutoWheelieTab = Window:CreateTab("Auto Wheelie", nil)
-AutoWheelieTab:CreateToggle({Name = "Enable Auto Wheelie", Callback = function(V) Config.Enabled = V end})
-local DistanceSlider = AutoWheelieTab:CreateSlider({Name = "Distance", Min = 10, Max = 5000, CurrentValue = 750, Callback = function(V) Config.TargetDistance = V end})
-local HoldSlider = AutoWheelieTab:CreateSlider({Name = "Hold Time", Min = 0.01, Max = 1.5, CurrentValue = 0.06, Callback = function(V) Config.HoldDuration = V end})
-local IntervalSlider = AutoWheelieTab:CreateSlider({Name = "Interval", Min = 0.01, Max = 1.5, CurrentValue = 0.05, Callback = function(V) Config.IntervalDuration = V end})
+local WheelieToggle = AutoWheelieTab:CreateToggle({Name = "Enable Auto Wheelie", CurrentValue = false, Callback = function(V) Config.Enabled = V end})
+local DistanceSlider = AutoWheelieTab:CreateSlider({Name = "Wheelie Target Distance", Min = 10, Max = 5000, CurrentValue = 750, Increment = 10, Callback = function(V) Config.TargetDistance = V end})
+local HoldSlider = AutoWheelieTab:CreateSlider({Name = "Hold Time", Min = 0.01, Max = 1.5, CurrentValue = 0.06, Increment = 0.01, Callback = function(V) Config.HoldDuration = V end})
+local IntervalSlider = AutoWheelieTab:CreateSlider({Name = "Interval", Min = 0.01, Max = 1.5, CurrentValue = 0.05, Increment = 0.01, Callback = function(V) Config.IntervalDuration = V end})
 AutoWheelieTab:CreateButton({Name = "Reset Defaults", Callback = function() Config.HoldDuration = 0.06; Config.IntervalDuration = 0.05; HoldSlider:Set(0.06); IntervalSlider:Set(0.05) end})
 
 local VisualTab = Window:CreateTab("Visual", nil)
-VisualTab:CreateToggle({Name = "Player ESP", Callback = function(V) Config.ESPEnabled = V; togglePlayerESP(V) end})
-VisualTab:CreateParagraph({Title = "Statistics", Content = "Tracking enabled."})
+VisualTab:CreateToggle({Name = "Player ESP", CurrentValue = false, Callback = function(V) Config.ESPEnabled = V; togglePlayerESP(V) end})
+local AnalyticsDisplay = VisualTab:CreateParagraph({Title = "Statistics", Content = "Tracking enabled."})
 
 local DiscordTab = Window:CreateTab("Discord", nil)
-DiscordTab:CreateInput({Name = "Webhook", Callback = function(T) Config.Webhook = T end})
+DiscordTab:CreateInput({Name = "Discord Webhook URL", Callback = function(T) Config.Webhook = T end})
 DiscordTab:CreateButton({Name = "Copy Discord Link", Callback = function() setclipboard("https://discord.gg/zrQnbxx8gg") end})
