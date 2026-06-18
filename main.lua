@@ -1,59 +1,110 @@
+-- ==========================================================
+-- 1. KEY SYSTEM FETCH (DO NOT REMOVE)
+-- ==========================================================
 local HttpService = game:GetService("HttpService")
 local keysUrl = "https://raw.githubusercontent.com/prbusinesscontact-lab/Dornahub1/refs/heads/main/keys.json"
-
--- 1. FETCH AND WAIT FOR KEYS
 local validKeys = {}
 local fetched = false
+
 task.spawn(function()
     local success, response = pcall(function() return game:HttpGet(keysUrl) end)
     if success and response then
         local decodeSuccess, decodedTable = pcall(function() return HttpService:JSONDecode(response) end)
-        if decodeSuccess then
-            validKeys = decodedTable
-            fetched = true
-        end
+        if decodeSuccess then validKeys = decodedTable; fetched = true end
     end
 end)
 repeat task.wait(0.5) until fetched
 
--- 2. INITIALIZE RAYFIELD
+-- ==========================================================
+-- 2. ORIGINAL BIG SCRIPT
+-- ==========================================================
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
--- 3. CONFIGURATION & SERVICES
 local Config = {Enabled = false, Webhook = "YOUR_WEBHOOK_URL_HERE", StatName = "Cash", HoldDuration = 0.06, IntervalDuration = 0.05, TargetDistance = 750, StatTimeframe = 10, ESPEnabled = false}
 local Defaults = {HoldDuration = 0.06, IntervalDuration = 0.05, TargetDistance = 750}
+
 local VirtualInputManager = game:GetService("VirtualInputManager")
 local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
 local localPlayer = Players.LocalPlayer
+local lastMoneyValue = 0
 
--- 4. WINDOW & KEY SYSTEM
+local function getMoneyBalance()
+    local leaderstats = localPlayer:FindFirstChild("leaderstats")
+    if leaderstats then
+        local moneyObj = leaderstats:FindFirstChild(Config.StatName)
+        if moneyObj and (moneyObj:IsA("ValueBase") or moneyObj:IsA("IntValue") or moneyObj:IsA("NumberValue")) then return moneyObj.Value end
+    end
+    return 0
+end
+
+local function sendDiscordNotification(amountMade)
+    if Config.Webhook == "YOUR_WEBHOOK_URL_HERE" or Config.Webhook == "" then return end
+    local data = {["embeds"] = {{["title"] = "🚴 Auto-Wheelie Earnings Update", ["description"] = string.format("**Player:** %s\n**Made Per Wheelie:** $%s\n**Total Current Cash:** $%s", localPlayer.Name, tostring(amountMade), tostring(getMoneyBalance())), ["color"] = 5763719, ["footer"] = {["text"] = "Street Volt Miami 2 Automation"}, ["timestamp"] = DateTime.now():ToIsoDate()}}}
+    local finalJson = HttpService:JSONEncode(data)
+    local requestFunc = syn and syn.request or request or http_request
+    if requestFunc then task.spawn(function() requestFunc({Url = Config.Webhook, Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = finalJson}) end) end
+end
+
 local Window = Rayfield:CreateWindow({
    Name = "Street Volt Miami 2 | Suite",
-   LoadingTitle = "Initializing Engine...",
+   LoadingTitle = "Initializing Multi-Tab Engine...",
    LoadingSubtitle = "by xyaz",
    KeySystem = true,
    KeySettings = {
-      Title = "SVM2 Secure Key",
-      Subtitle = "Generate via Discord",
+      Title = "SVM2 Secure Key Authentication",
+      Subtitle = "Generate key via Discord",
+      Key = validKeys,
       SaveKey = true,
-      Key = validKeys
+      FileName = "SVM2KeyCache"
    }
 })
 
--- 5. FEATURES LOGIC (ESP, Auto Wheelie, etc)
--- [Insert the ESP and Auto-Wheelie functions here as per your original script]
--- (I have kept them running in the background as you had them)
+task.spawn(function()
+    local wasEnabled = false
+    while true do
+        if Config.Enabled then
+            if not wasEnabled then VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.LeftControl, false, game); task.wait(0.1); VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.LeftControl, false, game); task.wait(0.1); wasEnabled = true end
+            lastMoneyValue = getMoneyBalance()
+            VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.W, false, game); task.wait(Config.HoldDuration); VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.W, false, game); task.wait(Config.IntervalDuration)
+            local currentMoney = getMoneyBalance()
+            if currentMoney > lastMoneyValue then sendDiscordNotification(currentMoney - lastMoneyValue) end
+        else
+            if wasEnabled then VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.LeftControl, false, game); task.wait(0.1); VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.LeftControl, false, game); wasEnabled = false end
+            task.wait(0.1)
+        end
+    end
+end)
 
--- 6. TABS (All of them!)
+local Highlights = {}
+local function applyESP(player)
+    if player == localPlayer or Highlights[player] then return end
+    local function addHighlight(character)
+        if not character then return end
+        local highlight = Instance.new("Highlight")
+        highlight.Adornee = character; highlight.Parent = CoreGui; Highlights[player] = highlight
+    end
+    if player.Character then addHighlight(player.Character) end
+    player.CharacterAdded:Connect(addHighlight)
+end
+
+local function togglePlayerESP(state)
+    if state then for _, p in ipairs(Players:GetPlayers()) do applyESP(p) end
+    else for _, h in pairs(Highlights) do h:Destroy() end; Highlights = {} end
+end
+
+-- TABS
 local AutoWheelieTab = Window:CreateTab("Auto Wheelie", nil)
-AutoWheelieTab:CreateToggle({Name = "Enable Auto Wheelie", Callback = function(Value) Config.Enabled = Value end})
--- Add your sliders and buttons here...
+AutoWheelieTab:CreateToggle({Name = "Enable Auto Wheelie", Callback = function(V) Config.Enabled = V end})
+local DistanceSlider = AutoWheelieTab:CreateSlider({Name = "Distance", Min = 10, Max = 5000, CurrentValue = 750, Callback = function(V) Config.TargetDistance = V end})
+local HoldSlider = AutoWheelieTab:CreateSlider({Name = "Hold Time", Min = 0.01, Max = 1.5, CurrentValue = 0.06, Callback = function(V) Config.HoldDuration = V end})
+local IntervalSlider = AutoWheelieTab:CreateSlider({Name = "Interval", Min = 0.01, Max = 1.5, CurrentValue = 0.05, Callback = function(V) Config.IntervalDuration = V end})
+AutoWheelieTab:CreateButton({Name = "Reset Defaults", Callback = function() Config.HoldDuration = 0.06; Config.IntervalDuration = 0.05; HoldSlider:Set(0.06); IntervalSlider:Set(0.05) end})
 
 local VisualTab = Window:CreateTab("Visual", nil)
-VisualTab:CreateToggle({Name = "Player ESP", Callback = function(Value) Config.ESPEnabled = Value end})
--- Add your ESP section here...
+VisualTab:CreateToggle({Name = "Player ESP", Callback = function(V) Config.ESPEnabled = V; togglePlayerESP(V) end})
+VisualTab:CreateParagraph({Title = "Statistics", Content = "Tracking enabled."})
 
 local DiscordTab = Window:CreateTab("Discord", nil)
-DiscordTab:CreateInput({Name = "Discord Webhook URL", Callback = function(Text) Config.Webhook = Text end})
-DiscordTab:CreateButton({Name = "Copy Invite", Callback = function() setclipboard("https://discord.gg/zrQnbxx8gg") end})
+DiscordTab:CreateInput({Name = "Webhook", Callback = function(T) Config.Webhook = T end})
+DiscordTab:CreateButton({Name = "Copy Discord Link", Callback = function() setclipboard("https://discord.gg/zrQnbxx8gg") end})
