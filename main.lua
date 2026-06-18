@@ -1,33 +1,40 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
--- Global Configuration State
-local Config = {
-    Enabled = false,
-    Webhook = "YOUR_WEBHOOK_URL_HERE",
-    StatName = "Cash",
-    HoldDuration = 0.06,
-    IntervalDuration = 0.05,
-    TargetDistance = 750,
-    StatTimeframe = 10,
-    ESPEnabled = false
-}
-
-local Defaults = {
-    HoldDuration = 0.06,
-    IntervalDuration = 0.05,
-    TargetDistance = 750
-}
+local Window = Rayfield:CreateWindow({
+   Name = "Street Volt Miami 2 | Auto-Wheelie",
+   LoadingTitle = "Adjusting Center of Gravity...",
+   LoadingSubtitle = "by Gemini",
+   ConfigurationSaving = {
+      Enabled = true,
+      FolderName = "StreetVoltMiami",
+      FileName = "WheelieConfig"
+   },
+   Discord = {
+      Enabled = false,
+      Invite = "",
+      RememberJoins = true
+   },
+   KeySystem = false
+})
 
 -- Services
 local VirtualInputManager = game:GetService("VirtualInputManager")
 local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
-local CoreGui = game:GetService("CoreGui")
 local localPlayer = Players.LocalPlayer
+
+-- Global Configuration (Lowered hold duration to drop the scooter's angle)
+local Config = {
+    Enabled = false,
+    Webhook = "YOUR_WEBHOOK_URL_HERE",
+    StatName = "Cash",
+    HoldDuration = 0.06,       -- Decreased to 0.06s to keep the front end lower
+    IntervalDuration = 0.05    -- Maintained fast recovery rate
+}
 
 local lastMoneyValue = 0
 
--- Functions
+-- Safe function to pull core currency numbers
 local function getMoneyBalance()
     local leaderstats = localPlayer:FindFirstChild("leaderstats")
     if leaderstats then
@@ -39,6 +46,7 @@ local function getMoneyBalance()
     return 0
 end
 
+-- Discord Notification Delivery Pipeline
 local function sendDiscordNotification(amountMade)
     if Config.Webhook == "YOUR_WEBHOOK_URL_HERE" or Config.Webhook == "" then return end
     
@@ -47,7 +55,9 @@ local function sendDiscordNotification(amountMade)
             ["title"] = "🚴 Auto-Wheelie Earnings Update",
             ["description"] = string.format("**Player:** %s\n**Made Per Wheelie:** $%s\n**Total Current Cash:** $%s", localPlayer.Name, tostring(amountMade), tostring(getMoneyBalance())),
             ["color"] = 5763719,
-            ["footer"] = {["text"] = "Street Volt Miami 2 Automation"},
+            ["footer"] = {
+                ["text"] = "Street Volt Miami 2 Automation"
+            },
             ["timestamp"] = DateTime.now():ToIsoDate()
         }}
     }
@@ -62,29 +72,20 @@ local function sendDiscordNotification(amountMade)
     end
 end
 
--- Rayfield Window Initialization (Key System Removed)
-local Window = Rayfield:CreateWindow({
-   Name = "Street Volt Miami 2 | Suite",
-   LoadingTitle = "Initializing Multi-Tab Engine...",
-   LoadingSubtitle = "by Gemini",
-   ConfigurationSaving = {
-      Enabled = true,
-      FolderName = "StreetVoltMiami",
-      FileName = "SuiteConfig"
-   }
-})
-
+-- Helper function to simulate a single Ctrl key press cleanly
 local function tapControlKey()
     VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.LeftControl, false, game)
     task.wait(0.05)
     VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.LeftControl, false, game)
 end
 
--- Core Auto-Wheelie Thread
+-- Dedicated Low-Stance Macro Thread
 task.spawn(function()
     local wasEnabled = false
+    
     while true do
         if Config.Enabled then
+            -- Lift front wheel on initialization
             if not wasEnabled then
                 tapControlKey()
                 task.wait(0.1) 
@@ -93,6 +94,7 @@ task.spawn(function()
             
             lastMoneyValue = getMoneyBalance()
             
+            -- Lower power input loop to hold a lower angle
             if not Config.Enabled then continue end
             VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.W, false, game)
             task.wait(Config.HoldDuration) 
@@ -100,12 +102,14 @@ task.spawn(function()
             
             task.wait(Config.IntervalDuration) 
             
+            -- Evaluate loop cycle generation profits
             local currentMoney = getMoneyBalance()
             if currentMoney > lastMoneyValue then
                 local profit = currentMoney - lastMoneyValue
                 sendDiscordNotification(profit)
             end
         else
+            -- Clean drop down when disabled
             if wasEnabled then
                 tapControlKey()
                 wasEnabled = false
@@ -115,59 +119,63 @@ task.spawn(function()
     end
 end)
 
--- Highlights/ESP Management System
-local Highlights = {}
-local function applyESP(player)
-    if player == localPlayer or Highlights[player] then return end
-    local function addHighlight(character)
-        if not character then return end
-        local highlight = Instance.new("Highlight")
-        highlight.Name = "ESP_Highlight"
-        highlight.FillColor = Color3.fromRGB(255, 0, 100)
-        highlight.FillTransparency = 0.5
-        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-        highlight.OutlineTransparency = 0.1
-        highlight.Adornee = character
-        highlight.Parent = CoreGui
-        Highlights[player] = highlight
-    end
-    if player.Character then addHighlight(player.Character) end
-    player.CharacterAdded:Connect(addHighlight)
-end
+--- UI Tab Setup ---
+local MainTab = Window:CreateTab("Main Framework", nil)
 
-local function togglePlayerESP(state)
-    if state then
-        for _, player in ipairs(Players:GetPlayers()) do applyESP(player) end
-    else
-        for player, highlight in pairs(Highlights) do
-            highlight:Destroy()
-            Highlights[player] = nil
-        end
-    end
-end
+MainTab:CreateSection("Low-Angle Automation Matrix")
 
-Players.PlayerAdded:Connect(applyESP)
-Players.PlayerRemoving:Connect(function(p) if Highlights[p] then Highlights[p]:Destroy(); Highlights[p] = nil end end)
+MainTab:CreateToggle({
+   Name = "Enable Auto-Wheelie Loop",
+   CurrentValue = false,
+   Flag = "WheelieToggle",
+   Callback = function(Value)
+       Config.Enabled = Value
+   end,
+})
 
--- TAB 1: Auto Wheelie
-local AutoWheelieTab = Window:CreateTab("Auto Wheelie", nil)
-AutoWheelieTab:CreateToggle({Name = "Enable Auto Wheelie", Callback = function(V) Config.Enabled = V end})
-local DistanceSlider = AutoWheelieTab:CreateSlider({Name = "Wheelie Target Distance", Min = 10, Max = 5000, CurrentValue = Config.TargetDistance, Increment = 10, Callback = function(V) Config.TargetDistance = V end})
-local HoldSlider = AutoWheelieTab:CreateSlider({Name = "Hold Time", Min = 0.01, Max = 1.5, CurrentValue = Config.HoldDuration, Increment = 0.01, Callback = function(V) Config.HoldDuration = V end})
-local IntervalSlider = AutoWheelieTab:CreateSlider({Name = "Interval", Min = 0.01, Max = 1.5, CurrentValue = Config.IntervalDuration, Increment = 0.01, Callback = function(V) Config.IntervalDuration = V end})
+MainTab:CreateSection("Networking & Webhooks")
 
-AutoWheelieTab:CreateButton({Name = "Reset to Defaults", Callback = function()
-    Config.HoldDuration = Defaults.HoldDuration
-    Config.IntervalDuration = Defaults.IntervalDuration
-    HoldSlider:Set(Defaults.HoldDuration)
-    IntervalSlider:Set(Defaults.IntervalDuration)
-end})
+MainTab:CreateInput({
+   Name = "Discord Webhook URL",
+   PlaceholderText = "Paste webhook here...",
+   RemoveTextAfterFocusLost = false,
+   Callback = function(Text)
+       Config.Webhook = Text
+   end,
+})
 
--- TAB 2: Visuals
-local VisualTab = Window:CreateTab("Visual", nil)
-VisualTab:CreateToggle({Name = "Player ESP", Callback = function(V) Config.ESPEnabled = V; togglePlayerESP(V) end})
+MainTab:CreateInput({
+   Name = "Leaderstat Money Variable",
+   CurrentValue = "Cash",
+   PlaceholderText = "e.g., Cash, Money",
+   RemoveTextAfterFocusLost = false,
+   Callback = function(Text)
+       Config.StatName = Text
+   end,
+})
 
--- TAB 3: Discord
-local DiscordTab = Window:CreateTab("Discord", nil)
-DiscordTab:CreateInput({Name = "Discord Webhook URL", Callback = function(T) Config.Webhook = T end})
-DiscordTab:CreateButton({Name = "Copy Invite Link", Callback = function() setclipboard("https://discord.gg/zrQnbxx8gg") end})
+MainTab:CreateSection("Precision Physics Tuning")
+
+MainTab:CreateSlider({
+   Name = "W Key Pulse Length (Sec)",
+   Min = 0.01,
+   Max = 1.0,
+   CurrentValue = 0.06, -- Default set lower to 0.06
+   Increment = 0.01,
+   ValueName = "Seconds",
+   Callback = function(Value)
+       Config.HoldDuration = Value
+   end,
+})
+
+MainTab:CreateSlider({
+   Name = "Pulse Cooldown Gap (Sec)",
+   Min = 0.01, 
+   Max = 1.0,
+   CurrentValue = 0.05, 
+   Increment = 0.01,
+   ValueName = "Seconds",
+   Callback = function(Value)
+       Config.IntervalDuration = Value
+   end,
+})
