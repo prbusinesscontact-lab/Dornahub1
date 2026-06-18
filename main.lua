@@ -1,27 +1,18 @@
 -- ==========================================================
--- 1. DEBUGGABLE KEY SYSTEM FETCH
+-- 1. DYNAMIC KEY SYSTEM FETCH
 -- ==========================================================
 local HttpService = game:GetService("HttpService")
 local keysUrl = "https://raw.githubusercontent.com/prbusinesscontact-lab/Dornahub1/refs/heads/main/keys.json"
 local validKeys = {}
 
 local success, response = pcall(function() return game:HttpGet(keysUrl) end)
-
 if success then
-    print("DornaHub Debug: GitHub Response received.")
     local decodeSuccess, decodedTable = pcall(function() return HttpService:JSONDecode(response) end)
-    if decodeSuccess then
-        validKeys = decodedTable
-        print("DornaHub Debug: Keys loaded successfully.")
-    else
-        warn("DornaHub Debug: Failed to decode JSON. Check keys.json format.")
-    end
-else
-    warn("DornaHub Debug: Failed to connect to GitHub. Check URL and Repository Privacy.")
+    if decodeSuccess then validKeys = decodedTable end
 end
 
 -- ==========================================================
--- 2. AUTO-REDIRECT
+-- 2. AUTO-REDIRECT TO DISCORD
 -- ==========================================================
 local requestFunc = syn and syn.request or request or http_request
 if requestFunc then
@@ -32,39 +23,45 @@ end
 -- 3. CORE SCRIPT
 -- ==========================================================
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
-local Config = {Enabled = false, Webhook = "YOUR_WEBHOOK_URL_HERE", HoldDuration = 0.06, IntervalDuration = 0.05}
+local Players = game:GetService("Players")
 local VirtualInputManager = game:GetService("VirtualInputManager")
+local localPlayer = Players.LocalPlayer
+
+local Config = {Enabled = false, Webhook = "", HoldDuration = 0.06, IntervalDuration = 0.05}
+
+-- Notification Helper
+local function sendDiscordNotification(amount)
+    if Config.Webhook == "" then return end
+    local data = {["embeds"] = {{["title"] = "🚴 Earnings Update", ["description"] = "Made: $"..tostring(amount), ["color"] = 5763719}}}
+    local finalJson = HttpService:JSONEncode(data)
+    local requestFunc = syn and syn.request or request or http_request
+    if requestFunc then task.spawn(function() requestFunc({Url = Config.Webhook, Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = finalJson}) end) end
+end
 
 local Window = Rayfield:CreateWindow({
    Name = "Street Volt Miami 2 | Auto-Wheelie",
    KeySystem = true, 
-   KeySettings = {
-      Title = "SVM2 Secure Key",
-      Subtitle = "Generate key via Discord",
-      Key = validKeys,
-      SaveKey = true,
-      FileName = "SVM2KeyCache"
-   }
+   KeySettings = {Key = validKeys, SaveKey = true, FileName = "SVM2KeyCache"}
 })
 
+-- Wheelie Loop
 task.spawn(function()
-    local wasEnabled = false
     while true do
         if Config.Enabled then
-            if not wasEnabled then VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.LeftControl, false, game); task.wait(0.1); VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.LeftControl, false, game); task.wait(0.1); wasEnabled = true end
-            VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.W, false, game); task.wait(Config.HoldDuration); VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.W, false, game); task.wait(Config.IntervalDuration)
-        else
-            if wasEnabled then VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.LeftControl, false, game); task.wait(0.1); VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.LeftControl, false, game); wasEnabled = false end
-            task.wait(0.1)
+            VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.W, false, game)
+            task.wait(Config.HoldDuration)
+            VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.W, false, game)
+            task.wait(Config.IntervalDuration)
         end
+        task.wait(0.1)
     end
 end)
 
 -- TABS
 local AutoWheelieTab = Window:CreateTab("Auto Wheelie", nil)
-AutoWheelieTab:CreateToggle({Name = "Enable Auto Wheelie", CurrentValue = false, Callback = function(V) Config.Enabled = V end})
-AutoWheelieTab:CreateSlider({Name = "Hold Time", Min = 0.01, Max = 1.5, CurrentValue = 0.06, Increment = 0.01, Callback = function(V) Config.HoldDuration = V end})
-AutoWheelieTab:CreateSlider({Name = "Interval", Min = 0.01, Max = 1.5, CurrentValue = 0.05, Increment = 0.01, Callback = function(V) Config.IntervalDuration = V end})
+AutoWheelieTab:CreateToggle({Name = "Enable Auto Wheelie", Callback = function(V) Config.Enabled = V end})
+AutoWheelieTab:CreateSlider({Name = "Hold Time", Min = 0.01, Max = 1.5, CurrentValue = 0.06, Callback = function(V) Config.HoldDuration = V end})
+AutoWheelieTab:CreateSlider({Name = "Interval", Min = 0.01, Max = 1.5, CurrentValue = 0.05, Callback = function(V) Config.IntervalDuration = V end})
 
 local DiscordTab = Window:CreateTab("Discord", nil)
 DiscordTab:CreateInput({Name = "Discord Webhook URL", Callback = function(T) Config.Webhook = T end})
