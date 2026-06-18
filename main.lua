@@ -47,8 +47,44 @@ local Window = Rayfield:CreateWindow({
 })
 
 -- ==============================================================================
--- 📁 YOUR MAIN GAME HUB SCRIPT INTERFACE GOES BELOW HERE:
+-- 📁 MAIN GAME HUB INTERFACE (UNLOCKED AFTER KEY VERIFICATION)
 -- ==============================================================================
--- Example: 
--- local Tab = Window:CreateTab("Main Hacks", 4483362458)
--- local Button = Tab:CreateButton({ Name = "Auto Wheelie", Callback = function() ... end })
+
+-- Create the main menu category tab
+local MainTab = Window:CreateTab("Main Features", 4483362458)
+
+-- Add the Auto Wheelie toggle inside the tab
+local WheelieToggle = MainTab:CreateToggle({
+    Name = "Auto Wheelie",
+    CurrentValue = false,
+    Flag = "AutoWheelieFlag", -- Unique identifier for config saving
+    Callback = function(Value)
+        _G.AutoWheelieEnabled = Value
+        
+        if Value then
+            Rayfield:Notify({
+                Title = "Dorna Hub",
+                Content = "Auto Wheelie Activated!",
+                Duration = 2,
+                Image = 4483362458,
+            })
+            
+            -- Your continuous loops or state management code handles the physical adjustment loops here
+            task.spawn(function()
+                while _G.AutoWheelieEnabled do
+                    -- This runs continuously in the background while the toggle is ON
+                    task.wait(0.1)
+                end
+            end)
+        else
+            Rayfield:Notify({
+                Title = "Dorna Hub",
+                Content = "Auto Wheelie Deactivated.",
+                Duration = 2,
+                Image = 4483362458,
+            })
+        end
+    end,
+})
+
+-- Add any extra features or buttons down here below the toggle!
